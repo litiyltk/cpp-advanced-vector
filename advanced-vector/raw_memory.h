@@ -25,16 +25,20 @@ public:
     // запрещён копирующий оператор присваивания
     RawMemory& operator=(const RawMemory& rhs) = delete;
 
-    // перемещающие конструктор
+    // перемещающий конструктор
     RawMemory(RawMemory&& other) noexcept {
-        buffer_ = std::move(other.GetAddress());
-        capacity_ = std::move(other.Capacity());
+    	Swap(other);
+        Deallocate(other.buffer_);
+        other.capacity_ = 0;
     }
  
     // оператор присваивания
     RawMemory& operator=(RawMemory&& rhs) noexcept {
-        buffer_ = std::move(rhs.GetAddress());
-        capacity_ = std::move(rhs.Capacity());
+        if (this != &rhs) {
+            Swap(rhs);
+            Deallocate(rhs.buffer_);
+            rhs.capacity_ = 0;
+        }
         return *this;
     }
 

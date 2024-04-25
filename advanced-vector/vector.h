@@ -63,7 +63,7 @@ public:
         return *this;
     }
 
-    // перемещающее присваивания
+    // перемещающее присваивание
     Vector& operator=(Vector&& rhs) noexcept {
         if (this != &rhs) {
             Swap(rhs);
@@ -142,7 +142,11 @@ public:
             size_t new_size = (size_ == 0) ? 1 : size_ * 2;
             RawMemory<T> new_data(new_size);
             new (new_data + size_) T(std::forward<Args>(args)...);
-            ReallocateData(data_.GetAddress(), size_, new_data.GetAddress());
+            try {
+                ReallocateData(data_.GetAddress(), size_, new_data.GetAddress());
+            } catch (...) {
+                std::destroy_at(data_ + size_ - 1);
+            }
             data_.Swap(new_data);
 
         } else { // конструируем в существующей памяти
@@ -213,7 +217,11 @@ public:
         if (size_ < Capacity()) { // вставка в вектор
             T value = T(std::forward<Args>(args)...);
             std::uninitialized_move_n(end() - 1, 1, end());
-            std::move_backward(begin() + index, end() - 1, end());
+            try {
+                std::move_backward(begin() + index, end() - 1, end());
+            } catch (...) {
+                std::destroy_at(end() - 1);
+            }
             data_[index] = std::move(value);
 
         } else { // если вектор заполнен

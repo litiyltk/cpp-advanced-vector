@@ -1,4 +1,5 @@
 #include "vector.h"
+#include "tests.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -640,6 +641,8 @@ void Benchmark() {
 }
 
 int main() {
+    BasicFunctionalityTests();
+    
     try {
         Test1();
         Test2();
