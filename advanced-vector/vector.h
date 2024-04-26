@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <stdexcept>
 #include <cassert>
 #include <memory>
 #include <new>
@@ -18,6 +19,9 @@ public:
 
     using iterator = T*;
     using const_iterator = const T*;
+
+    using reverse_iterator = std::reverse_iterator<T*>;
+    using const_reverse_iterator = std::reverse_iterator<const T*>;
 
     Vector() = default;
 
@@ -92,6 +96,11 @@ public:
         return data_.Capacity();
     }
 
+    // проверка на отсутствие элементов
+    bool Empty() const noexcept {
+        return size_ == 0;
+    }
+
     // резервирование памяти под элементы вектора
     void Reserve(size_t new_capacity) {
         if (new_capacity <= data_.Capacity()) { // есть место - не выделяем память
@@ -117,6 +126,13 @@ public:
             std::uninitialized_value_construct_n(data_.GetAddress() + size_, new_size - size_);
         }
         size_ = new_size;
+    }
+
+    // обнуляет размер массива, не изменяя его вместимость
+    void Clear() {
+        if (size_ != 0) {
+            Resize(0);
+        }
     }
 
     // добавляет новое значение в конец вектора, реализация на основе EmplaceBack
@@ -145,7 +161,7 @@ public:
             try {
                 ReallocateData(data_.GetAddress(), size_, new_data.GetAddress());
             } catch (...) {
-                std::destroy_at(data_ + size_ - 1);
+                std::destroy_n(new_data.GetAddress(), size_); //
             }
             data_.Swap(new_data);
 
@@ -157,19 +173,41 @@ public:
         return *(data_ + size_ - 1);
     }
 
-    // оператор [] для доступа к элементам вектора
+    // оператор [] для доступа к элементам вектора по константной ссылке
     const T& operator[](size_t index) const noexcept {
         assert(index < size_);
         return const_cast<Vector&>(*this)[index];
     }
 
-    // оператор [] для доступа к элементам вектора
+    // оператор [] для доступа к элементам вектора по ссылке
     T& operator[](size_t index) noexcept {
         assert(index < size_);
         return data_[index];
     }
 
-    // возвращает итератор
+    /*
+    оператор At для доступа к элементам вектора по константной ссылке,
+    выбрасывает исключение std::out_of_range, если index >= size
+    */
+    const T& At(size_t index) const {
+        if (index >= size_) {
+            throw std::out_of_range("out of range");
+        }
+        return data_[index];
+    }
+
+    /*
+    оператор At для доступа к элементам вектора по ссылке,
+    выбрасывает исключение std::out_of_range, если index >= size
+    */
+    T& At(size_t index) {
+        if (index >= size_) {
+            throw std::out_of_range("out of range");
+        }
+        return data_[index];
+    }
+
+    // возвращает итератор, указывающий на начало вектора
     iterator begin() noexcept {
         return data_.GetAddress();
     }
@@ -178,6 +216,7 @@ public:
     iterator end() noexcept {
         return data_.GetAddress() + size_;
     }
+
     const_iterator begin() const noexcept {
         return const_iterator(data_.GetAddress());
     }
@@ -192,6 +231,44 @@ public:
 
     const_iterator cend() const noexcept {
         return const_iterator(data_.GetAddress() + size_);
+    }
+
+    // возвращает итератор, указывающий на начало вектора
+    reverse_iterator rbegin() noexcept {
+        return reverse_iterator(end());
+    }
+
+    // возвращает итератор, указывающий на конец вектора (на элемент после последнего в векторе)
+    reverse_iterator rend() noexcept {
+        return reverse_iterator(begin());
+    }
+
+    const_reverse_iterator rbegin() const noexcept {
+        return const_reverse_iterator(end());
+    }
+
+    const_reverse_iterator rend() const noexcept {
+        return const_reverse_iterator(begin());
+    }
+
+    const_reverse_iterator crbegin() const noexcept {
+        return const_reverse_iterator(end());
+    }
+
+    const_reverse_iterator crend() const noexcept {
+        return const_reverse_iterator(begin());
+    }
+
+    // возвращает первый элемент вектора (первый элемент вектора)
+    T& front() noexcept {
+        assert(size_ != 0);
+        return *begin();
+    }
+
+    // последний элемент вектора
+    T& back() noexcept {
+        assert(size_ != 0);
+        return *(data_.GetAddress() + size_ - 1);
     }
 
     // возвращает итератор, указывающий на вставленный элемент в новом блоке памяти, реализация на основе Emplace
@@ -220,7 +297,7 @@ public:
             try {
                 std::move_backward(begin() + index, end() - 1, end());
             } catch (...) {
-                std::destroy_at(end() - 1);
+                std::destroy_at(end()); //
             }
             data_[index] = std::move(value);
 
@@ -231,7 +308,7 @@ public:
             try {
                 ReallocateData(data_.GetAddress(), index, new_data.GetAddress());
             } catch (...) {
-                std::destroy_n(new_data + index, 1);
+                std::destroy_n(new_data.GetAddress() + index, 1);
             }
             try {
                 ReallocateData(data_ + index, size_ - index, new_data + index + 1);

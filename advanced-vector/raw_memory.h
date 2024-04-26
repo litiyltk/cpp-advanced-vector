@@ -28,16 +28,12 @@ public:
     // перемещающий конструктор
     RawMemory(RawMemory&& other) noexcept {
     	Swap(other);
-        Deallocate(other.buffer_);
-        other.capacity_ = 0;
     }
  
     // оператор присваивания
     RawMemory& operator=(RawMemory&& rhs) noexcept {
         if (this != &rhs) {
             Swap(rhs);
-            Deallocate(rhs.buffer_);
-            rhs.capacity_ = 0;
         }
         return *this;
     }
